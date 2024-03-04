@@ -1,0 +1,78 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%setup
+    if [ ! -e emacs-28.2.tar.gz ] ; then
+       wget http://ftp.jaist.ac.jp/pub/GNU/emacs/emacs-28.2.tar.gz
+    fi
+
+%files
+    ./emacs-28.2.tar.gz /usr/local/src
+    ./Cargo.toml /usr/local/src
+
+
+%post
+    apt-get -y update
+    apt-get -y upgrade
+    apt-get -y install build-essential \
+        gcc-11 g++-11 gdb binutils \
+        autoconf automake libtool \
+        libtiff5-dev libgif-dev libjpeg-dev libpng-dev
+    apt install -y libxpm-dev libncurses-dev  
+    apt install -y libgnutls28-dev \
+        pkg-config \
+	    git wget tree cmigemo \
+        python3 nodejs \
+        texinfo \
+        gfortran-11
+
+    apt install -y libgccjit-11-dev \
+        fdclone libjansson-dev shellcheck 
+
+    apt install -y rustc cargo libpcre2-dev
+
+    apt-get -y install \
+        ncdu \
+        tree sl cowsay \
+        git bzip2 pigz xz-utils \
+        openssh-client cadaver \
+        lftp wget curl net-tools \
+        sysstat fio dbench hpcc stress sysbench \
+
+    ## install Node.js ver 18.x (binary files)
+    cd /usr/local/src
+    curl -sL https://nodejs.org/dist/v18.18.0/node-v18.18.0-linux-x64.tar.xz -o node-v18.18.0-linux-x64.tar.xz
+    tar -xJf node-v18.18.0-linux-x64.tar.xz -C /usr/local --strip-components=1
+
+
+    ## install iperf3 ver3.6
+	wget https://downloads.es.net/pub/iperf/iperf-3.6.tar.gz
+	tar zxvf iperf-3.6.tar.gz
+	cd iperf-3.6
+	./configure
+	make
+	make install
+
+    ## install ripgrep
+    cd /usr/local/src
+    git clone https://github.com/BurntSushi/ripgrep.git
+    cd ripgrep
+    cp /usr/local/src/Cargo.toml /usr/local/src/ripgrep/
+    cargo build --release --features 'pcre2'
+    cp target/release/rg /usr/local/bin
+
+    ## install emacs28
+    cd /usr/local/src
+    tar zxvf emacs-28.2.tar.gz
+    cd emacs-28.2
+    ./configure --with-x-toolkit=no --with-gnutls=yes --with-json 
+    make -j 8
+    make install
+
+%environment
+    export JAVA_HOME=$HOME/.sdkman/candidates/java/current
+    export MAVEN_HOME=$HOME/.sdkman/candidates/maven/current
+    export PATH=$JAVA_HOME/bin:$MAVEN_HOME/bin:$PATH
+
+%runscript
+    exec emacs "$@"
